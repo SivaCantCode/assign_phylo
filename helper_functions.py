@@ -278,7 +278,28 @@ def sort_children_by_leaves(tree: Node) -> None:
         The root node of the tree.
 
     """
-    raise NotImplementedError()
+    _sort_and_count_leaves(tree)
+
+
+def _sort_and_count_leaves(node: Node) -> int:
+    if node is None:
+        return 0
+
+    if node.left is None and node.right is None:
+        return 1
+
+    left_count = _sort_and_count_leaves(node.left)
+    right_count = _sort_and_count_leaves(node.right)
+
+    # put the child with fewer leaves on the left 
+    if left_count > right_count:
+        node.left, node.right = node.right, node.left
+        node.left_distance, node.right_distance = (
+            node.right_distance,
+            node.left_distance,
+        )
+
+    return left_count + right_count
 
 
 def plot_nj_tree_radial(tree: Node, ax: Axes = None, **kwargs) -> None:
