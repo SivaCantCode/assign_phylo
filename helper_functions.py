@@ -326,3 +326,70 @@ def plot_nj_tree_radial(tree: Node, ax: Axes = None, **kwargs) -> None:
 
     """
     raise NotImplementedError()
+
+
+
+
+#Taken from my previous assginment 
+
+def global_alignment(seq1: str, seq2: str, scoring_function) -> tuple:
+    gap_penalty = -scoring_function("-", "-")
+    n_rows, n_cols = len(seq1) + 1, len(seq2) + 1
+
+    
+    alphabet = sorted(set(seq1) | set(seq2))
+    letter_index = {letter: k for k, letter in enumerate(alphabet)}
+    score_table = np.array(
+        [[scoring_function(a, b) for b in alphabet] for a in alphabet], dtype=float
+    )
+    seq2_indices = np.array([letter_index[letter] for letter in seq2], dtype=int)
+
+    
+    matrix = np.zeros((n_rows, n_cols))
+    matrix[0, :] = -gap_penalty * np.arange(n_cols)
+    matrix[:, 0] = -gap_penalty * np.arange(n_rows)
+
+    column_offsets = gap_penalty * np.arange(1, n_cols)
+
+    for i in range(1, n_rows):
+        previous_row = matrix[i - 1]
+
+        match_scores = score_table[letter_index[seq1[i - 1]], seq2_indices]
+
+        diagonal = previous_row[:-1] + match_scores
+        up = previous_row[1:] - gap_penalty
+        best_without_left = np.maximum(diagonal, up)
+
+       
+        candidates = np.concatenate(([matrix[i, 0]], best_without_left + column_offsets))
+        running_best = np.maximum.accumulate(candidates)[1:]
+        matrix[i, 1:] = running_best - column_offsets
+
+
+    i, j = len(seq1), len(seq2)
+    aligned_seq1, aligned_seq2 = [], []
+
+    while i > 0 or j > 0:
+        if i > 0 and j > 0:
+            diagonal = matrix[i - 1, j - 1] + scoring_function(seq1[i - 1], seq2[j - 1])
+            if matrix[i, j] == diagonal:
+                aligned_seq1.append(seq1[i - 1])
+                aligned_seq2.append(seq2[j - 1])
+                i, j = i - 1, j - 1
+                continue
+
+        if i > 0 and matrix[i, j] == matrix[i - 1, j] - gap_penalty:
+            aligned_seq1.append(seq1[i - 1])
+            aligned_seq2.append("-")
+            i -= 1
+            continue
+
+        aligned_seq1.append("-")
+        aligned_seq2.append(seq2[j - 1])
+        j -= 1
+
+
+    aligned_seq1 = "".join(reversed(aligned_seq1))
+    aligned_seq2 = "".join(reversed(aligned_seq2))
+
+    return aligned_seq1, aligned_seq2, float(matrix[-1, -1])
