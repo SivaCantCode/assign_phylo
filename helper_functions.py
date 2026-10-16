@@ -125,30 +125,67 @@ def neighbor_joining(distances: np.ndarray, labels: list) -> Node:
 
 
 def plot_nj_tree(tree: Node, ax: Axes = None, **kwargs) -> None:
-    """A function for plotting neighbor joining phylogeny dendrogram.
 
-    Parameters
-    ----------
-    tree: Node
-        The root of the phylogenetic tree produced by `neighbor_joining(...)`.
-    ax: Axes
-        A matplotlib Axes object which should be used for plotting.
-    kwargs
-        Feel free to replace/use these with any additional arguments you need.
-        But make sure your function can work without them, for testing purposes.
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 8))
 
-    Example
-    -------
-    >>> import matplotlib.pyplot as plt
-    >>>
-    >>> tree = neighbor_joining(distances)
-    >>> fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
-    >>> plot_nj_tree(tree=tree, ax=ax)
-    >>> fig.savefig("example.png")
+    style = {
+        "color": kwargs.get("color", "k"),
+        "linewidth": kwargs.get("linewidth", 1.5),
+        "fontsize": kwargs.get("fontsize", 12),
+        "leaf_colors": kwargs.get("leaf_colors", {}),
+    }
+    root_stub = kwargs.get("root_stub", 0.2)
 
-    """
+
+    root_y, _ = _draw_subtree(ax, tree, x=0, next_leaf_y=0, style=style)
+
+    _draw_line(ax, [-root_stub, 0], [root_y, root_y], style)
+
+    for side in ["top", "right"]:
+        ax.spines[side].set_visible(False)
 
     return ax
+
+
+def _draw_line(ax: Axes, x_values: list, y_values: list, style: dict) -> None:
+    ax.plot(x_values, y_values, color=style["color"], lw=style["linewidth"])
+
+
+def _draw_subtree(ax: Axes, node: Node, x: float, next_leaf_y: int, style: dict) -> tuple:
+
+    is_leaf = node.left is None and node.right is None
+    if is_leaf:
+        y = next_leaf_y
+        ax.text(
+            x,
+            y,
+            f"  {node.name}",
+            color=style["leaf_colors"].get(node.name, "k"),
+            fontsize=style["fontsize"],
+            verticalalignment="center",
+        )
+        return y, next_leaf_y + 1
+
+
+    child_ys = []
+    for child, distance in [
+        (node.left, node.left_distance),
+        (node.right, node.right_distance),
+    ]:
+        if child is None:
+            continue
+        child_x = x + distance
+        child_y, next_leaf_y = _draw_subtree(ax, child, child_x, next_leaf_y, style)
+        _draw_line(ax, [x, child_x], [child_y, child_y], style)
+        child_ys.append(child_y)
+
+    _draw_line(ax, [x, x], [min(child_ys), max(child_ys)], style)
+    y = (min(child_ys) + max(child_ys)) / 2
+
+
+    return y, next_leaf_y
+
 
 
 def _find_a_parent_to_node(tree: Node, node: Node) -> tuple:
